@@ -1,7 +1,7 @@
 # VRaptor streamable pages
 
-This projects aims to enable async rendenring of htmls using VRaptor. The
-inspiration came from Linkedin
+This projects aims to enable async rendering of htmls using VRaptor. The
+inspiration came from this Linkedin
 talk(http://engineering.linkedin.com/play/composable-and-streamable-play-apps).
 
 #Example
