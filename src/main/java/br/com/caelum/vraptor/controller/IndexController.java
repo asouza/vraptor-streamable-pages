@@ -1,25 +1,13 @@
 package br.com.caelum.vraptor.controller;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
-
-import org.jboss.weld.bean.builtin.ee.HttpServletRequestBean;
-
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
-import com.ning.http.client.ListenableFuture;
-import com.ning.http.client.Response;
 
 import br.com.caelum.vraptor.Controller;
 import br.com.caelum.vraptor.Path;
 import br.com.caelum.vraptor.Result;
-import br.com.caelum.vraptor.proxy.CDIProxies;
 import br.com.caelum.vraptor.streamablepages.Streamer;
 
 @Controller

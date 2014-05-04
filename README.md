@@ -1,5 +1,57 @@
-# VRaptor blank project
+# VRaptor streamable pages
 
-This is a blank project to help you to use VRaptor. You can easily import in you IDE as Maven project.
+This projects aims to enable async rendenring of htmls using VRaptor. The
+inspiration came from Linkedin
+talk(http://engineering.linkedin.com/play/composable-and-streamable-play-apps).
 
-Este é um projeto em branco para ajudar você a usar o VRaptor. Você pode facilmente importá-lo na sua IDE favorita como um projeto Maven.
+#Example
+
+Take a look on this example:
+
+```
+@Controller
+public class IndexController {
+
+	private final Result result;
+	@Inject
+	private Streamer streamer;
+
+	/**
+	 * @deprecated CDI eyes only
+	 */
+	public IndexController() {
+		this(null);
+	}
+
+	@Inject
+	public IndexController(Result result) {
+		this.result = result;
+	}
+
+	@Path("/")
+	public void index() throws IOException, InterruptedException, ExecutionException {
+		streamer.order("http://localhost:8080/vraptor-blank-project/index/start")
+				.unOrder("http://localhost:8080/vraptor-blank-project/index/page1",
+						"http://localhost:8080/vraptor-blank-project/index/page2")
+				.order("http://localhost:8080/vraptor-blank-project/index/end");
+		result.nothing();
+	}
+
+	public void start() {
+		result.include("variable", "VRaptor!");
+	}
+
+	public void page1() throws InterruptedException {
+		Thread.sleep(2000);
+	}
+
+	public void page2() {
+
+	}
+
+	public void end() {
+
+	}
+
+}
+```
