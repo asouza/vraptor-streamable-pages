@@ -25,7 +25,6 @@ import com.ning.http.client.Response;
 public class Streamer {
 
 	private HttpServletResponse response;
-	private HttpServletRequest request;
 	private AsyncHttpClient client = new AsyncHttpClient();
 	private Set<ListenableFuture<?>> unorderedPagelets = new HashSet<>();
 	private Set<com.ning.http.client.cookie.Cookie> ningCookies = new HashSet<>();
@@ -38,7 +37,7 @@ public class Streamer {
 	public Streamer(HttpServletResponse response, HttpServletRequest request) {
 		super();
 		this.response = CDIProxies.unproxifyIfPossible(response);
-		this.request = CDIProxies.unproxifyIfPossible(request);
+		CDIProxies.unproxifyIfPossible(request);
 		saveCookiesToUseInRequests(request.getCookies());
 	}
 
@@ -100,6 +99,7 @@ public class Streamer {
 			}
 			if (done)
 				break;
+			Thread.yield();
 		}
 		return this;
 	}
