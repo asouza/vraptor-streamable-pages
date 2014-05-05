@@ -2,8 +2,11 @@ package br.com.caelum.vraptor.streamablepages;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 
+import javax.annotation.PreDestroy;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.servlet.http.Cookie;
@@ -26,10 +29,10 @@ public class Streamer {
 
 	private HttpServletResponse response;
 	private AsyncHttpClient client = new AsyncHttpClient();
-	private Set<ListenableFuture<?>> unorderedPagelets = new HashSet<>();
 	private Set<com.ning.http.client.cookie.Cookie> ningCookies = new HashSet<>();
 	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
 
+	@Deprecated
 	public Streamer() {
 	}
 
@@ -39,6 +42,11 @@ public class Streamer {
 		this.response = CDIProxies.unproxifyIfPossible(response);
 		CDIProxies.unproxifyIfPossible(request);
 		saveCookiesToUseInRequests(request.getCookies());
+	}
+	
+	@PreDestroy
+	public void release(){
+		client.close();
 	}
 
 	private void saveCookiesToUseInRequests(Cookie[] cookies) {
@@ -89,19 +97,27 @@ public class Streamer {
 	}
 
 	public Streamer unOrder(String... urls) {
+		
+		final CountDownLatch countDownLatch = new CountDownLatch(urls.length);
 		for (String url : urls) {
-			unorderedPagelets.add(asyncGet(url));
+			
+			ListenableFuture<Void> asyncGet = asyncGet(url);
+			asyncGet.addListener(new Runnable() {
+				
+				@Override
+				public void run() {
+					countDownLatch.countDown();
+				}
+			}, Executors.newFixedThreadPool(urls.length));//TODO what is the best number of threads?			
 		}
-		while (true) {
-			boolean done = true;
-			for (ListenableFuture<?> pagelet : unorderedPagelets) {
-				done = pagelet.isDone() && done;
-			}
-			if (done)
-				break;
-			Thread.yield();
+		try {
+			countDownLatch.await();
+		} catch (InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 		return this;
 	}
+	
+
 
 }
