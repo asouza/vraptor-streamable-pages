@@ -1,23 +1,25 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>br.com.caelum</groupId>
+	<groupId>br.com.caelum.vraptor</groupId>
 	<artifactId>vraptor-streamable-pages</artifactId>
-	<version>4.0.0.Final</version>
-	<packaging>war</packaging>
+	<version>0.0.1</version>
+	<packaging>jar</packaging>
 
-	<description>Example of streamable pages with vraptor</description>
+	<description>Compose your complex pages with small jsps instead of write a big one.</description>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<weld.version>2.1.2.Final</weld.version>
+		<vraptor.version>4.0.0.Final</vraptor.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>br.com.caelum</groupId>
 			<artifactId>vraptor</artifactId>
-			<version>${project.version}</version>
+			<version>${vraptor.version}</version>
 		</dependency>
 
 		<dependency>
@@ -25,24 +27,11 @@
 			<artifactId>weld-servlet-core</artifactId>
 			<version>${weld.version}</version>
 		</dependency>
-		
-        <dependency>
-            <groupId>org.jboss.weld</groupId>
-            <artifactId>weld-core-impl</artifactId>
-            <version>${weld.version}</version>
-        </dependency>
-		
-		<dependency>
-			<groupId>org.hibernate</groupId>
-			<artifactId>hibernate-validator-cdi</artifactId>
-			<version>5.1.0.Final</version>
-		</dependency>
 
 		<dependency>
-		    <groupId>javax.el</groupId>
-		    <artifactId>el-api</artifactId>
-		    <version>2.2</version>
-		    <scope>provided</scope>
+			<groupId>org.jboss.weld</groupId>
+			<artifactId>weld-core-impl</artifactId>
+			<version>${weld.version}</version>
 		</dependency>
 
 		<dependency>
@@ -51,6 +40,7 @@
 			<version>1</version>
 			<scope>provided</scope>
 		</dependency>
+
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>javax.servlet-api</artifactId>
@@ -58,36 +48,31 @@
 			<scope>provided</scope>
 		</dependency>
 
+
 		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>jstl</artifactId>
-			<version>1.2</version>
+			<groupId>com.ning</groupId>
+			<artifactId>async-http-client</artifactId>
+			<version>1.8.4</version>
 		</dependency>
-		
-    <dependency>
-        <groupId>com.ning</groupId>
-        <artifactId>async-http-client</artifactId>
-        <version>1.8.4</version>
-    </dependency>
-		
+
 	</dependencies>
-	
-    <repositories> 
-     <repository>
-       <id>typesafe-repo</id>
-       <name>Typesafe Repo</name>
-       <url>http://repo.typesafe.com/typesafe/releases/</url>     
-       <releases>
-         <enabled>true</enabled>
-         <updatePolicy>never</updatePolicy>
-       </releases>
-       <snapshots>
-         <enabled>true</enabled>
-         <updatePolicy>never</updatePolicy>
-       </snapshots>
-     </repository>
-    </repositories>
-	
+
+	<repositories>
+		<repository>
+			<id>typesafe-repo</id>
+			<name>Typesafe Repo</name>
+			<url>http://repo.typesafe.com/typesafe/releases/</url>
+			<releases>
+				<enabled>true</enabled>
+				<updatePolicy>never</updatePolicy>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+				<updatePolicy>never</updatePolicy>
+			</snapshots>
+		</repository>
+	</repositories>
+
 
 	<build>
 		<finalName>vraptor-blank-project</finalName>
