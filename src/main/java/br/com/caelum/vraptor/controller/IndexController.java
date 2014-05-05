@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpSession;
 
 import br.com.caelum.vraptor.Controller;
 import br.com.caelum.vraptor.Path;
@@ -16,6 +17,8 @@ public class IndexController {
 	private final Result result;
 	@Inject
 	private Streamer streamer;
+	@Inject
+	private HttpSession session;
 
 	/**
 	 * @deprecated CDI eyes only
@@ -28,13 +31,18 @@ public class IndexController {
 	public IndexController(Result result) {
 		this.result = result;
 	}
+	
+	public void createSession(){
+		session.setAttribute("user","user name");
+		result.nothing();
+	}
 
 	@Path("/")
 	public void index() throws IOException, InterruptedException, ExecutionException {
-		streamer.order("http://localhost:8080/vraptor-blank-project/index/start")
-				.unOrder("http://localhost:8080/vraptor-blank-project/index/page1",
-						"http://localhost:8080/vraptor-blank-project/index/page2")
-				.order("http://localhost:8080/vraptor-blank-project/index/end");
+		streamer.order("http://localhost:8080/vraptor-streamable-pages/index/start")
+				.unOrder("http://localhost:8080/vraptor-streamable-pages/index/page1",
+						"http://localhost:8080/vraptor-streamable-pages/index/page2")
+				.order("http://localhost:8080/vraptor-streamable-pages/index/end");
 		result.nothing();
 	}
 
@@ -47,7 +55,7 @@ public class IndexController {
 	}
 
 	public void page2() {
-
+		
 	}
 
 	public void end() {
