@@ -6,6 +6,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
@@ -30,6 +31,7 @@ public class Streamer {
 	private HttpServletResponse response;
 	private AsyncHttpClient client = new AsyncHttpClient();
 	private Set<com.ning.http.client.cookie.Cookie> ningCookies = new HashSet<>();
+	private HttpServletRequest request;
 	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
 
 	@Deprecated
@@ -40,13 +42,18 @@ public class Streamer {
 	public Streamer(HttpServletResponse response, HttpServletRequest request) {
 		super();
 		this.response = CDIProxies.unproxifyIfPossible(response);
-		CDIProxies.unproxifyIfPossible(request);
-		saveCookiesToUseInRequests(request.getCookies());
+		this.request = CDIProxies.unproxifyIfPossible(request);
+	
 	}
 	
 	@PreDestroy
 	public void release(){
 		client.close();
+	}
+	
+	@PostConstruct
+	public void postConstruct(){
+		saveCookiesToUseInRequests(request.getCookies());
 	}
 
 	private void saveCookiesToUseInRequests(Cookie[] cookies) {
