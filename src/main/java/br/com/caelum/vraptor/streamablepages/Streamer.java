@@ -1,5 +1,6 @@
 package br.com.caelum.vraptor.streamablepages;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -17,8 +18,9 @@ import org.slf4j.LoggerFactory;
 import rx.Observable;
 import rx.Observable.OnSubscribe;
 import rx.Subscriber;
-import rx.Subscription;
+import rx.functions.Action1;
 import rx.functions.Func1;
+import rx.subjects.ReplaySubject;
 import br.com.caelum.vraptor.Result;
 import br.com.caelum.vraptor.proxy.CDIProxies;
 
@@ -36,7 +38,7 @@ public class Streamer {
 	private HttpServletRequest request;
 	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
 	private Result result;
-	private Observable<String> currentObservable = Observable.just("");
+	private Observable<String> endOfRequest = null;
 	
 
 	@Deprecated
@@ -71,21 +73,24 @@ public class Streamer {
 					.getValue(), cookie.getDomain(), cookie.getPath(), cookie.getMaxAge(), cookie.getMaxAge(), cookie
 					.getSecure(), cookie.isHttpOnly()));
 		}
+		
 	}
 
 	public Streamer order(final String url) {
-		Observable<String> observable = asyncGet(url);
-		final Bloco bloco = new Bloco(observable);
-		currentObservable = currentObservable.map(new Func1<String, String>() {
+		final Observable<String> observable = asyncGet(url);
+		if (endOfRequest != null) {
+			endOfRequest = observable;
+			write(endOfRequest);
+		} else {
+			endOfRequest.map(new Func1<String, String>() {
+				@Override
+				public String call(String result) {
+					write(observable);
+					return null;
+				}
 
-			@Override
-			public String call(String t1) {
-				bloco.subscribe(response);
-				return null;
-			}
-		});
-		currentObservable.subscribe().unsubscribe();
-		
+			});
+		}
 		return this;
 
 	}
@@ -123,34 +128,48 @@ public class Streamer {
 		}
 	}
 
-	public Streamer unOrder(String... urls) {		
-		final Bloco bloco = new Bloco();
+	public Streamer unOrder(String... urls) {
+		final ReplaySubject<String> subject = ReplaySubject.create();
 		for (String url : urls) {
 			Observable<String> observable = asyncGet(url);
-			bloco.add(observable);
-			
+			observable.subscribe(new Action1<String>() {
+				@Override
+				public void call(String t1) {
+					subject.onNext(t1);
+				}
+			});
 		}
-		currentObservable = currentObservable.map(new Func1<String,String>() {
-
+		this.endOfRequest = this.endOfRequest.map(new Func1<String, String>() {
 			@Override
-			public String call(String descobrirOQueFazerComEsseParam) {
-				bloco.subscribe(response);
+			public String call(String t1) {
+				write(subject);
 				return null;
 			}
 		});
-		currentObservable.subscribe();
-		
 		return this;
 	}
 
 	public void await() {
+		// TODO wait for endOfRequest completion!!!
 		try {
 			Thread.sleep(3000);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		result.nothing();
+	}
+	
+	private void write(Observable<String> observable) {
+		observable.subscribe(new Action1<String>() {
+			@Override
+			public void call(String t1) {
+				try {
+					response.getWriter().print(t1);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		});
 	}
 
 }
