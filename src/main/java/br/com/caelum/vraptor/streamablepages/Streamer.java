@@ -1,8 +1,11 @@
 package br.com.caelum.vraptor.streamablepages;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -15,18 +18,14 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import rx.Observable;
-import rx.Observable.OnSubscribe;
-import rx.Subscriber;
-import rx.functions.Action1;
-import rx.functions.Func1;
-import rx.subjects.ReplaySubject;
+import br.com.caelum.blockingpromises.JPromise;
 import br.com.caelum.vraptor.Result;
 import br.com.caelum.vraptor.proxy.CDIProxies;
 
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
+import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Response;
 
 @RequestScoped
@@ -38,12 +37,11 @@ public class Streamer {
 	private HttpServletRequest request;
 	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
 	private Result result;
-	private Observable<String> endOfRequest = null;
-	
+	private List<JPromise<Integer>> queue = new ArrayList<>();
 
 	@Deprecated
 	public Streamer() {
-		
+
 	}
 
 	@Inject
@@ -73,53 +71,79 @@ public class Streamer {
 					.getValue(), cookie.getDomain(), cookie.getPath(), cookie.getMaxAge(), cookie.getMaxAge(), cookie
 					.getSecure(), cookie.isHttpOnly()));
 		}
-		
+
+	}
+
+	private class ResponseWriter implements Runnable {
+
+		private JPromise<Integer> waitingRequestPromise;
+		private ListenableFuture<String> listener;
+
+		public ResponseWriter(JPromise<Integer> promise, ListenableFuture<String> listener) {
+			super();
+			this.waitingRequestPromise = promise;
+			this.listener = listener;
+			queue.add(promise);
+		}
+
+		private void completeAndWrite() {
+			System.out.println("escrevendo...");
+			try {
+				response.getWriter().print(listener.get());
+				waitingRequestPromise.success(1);
+			} catch (Exception exception) {
+				throw new RuntimeException(exception);
+			}
+		}
+
+		@Override
+		public void run() {
+			int index = queue.indexOf(waitingRequestPromise);
+			if (index == 0) {
+				completeAndWrite();
+			}
+
+			JPromise<Integer> blockingPromise = queue.get(index - 1);
+
+			// se tem um outra na fila, espera
+			blockingPromise.onSuccess(new Runnable() {
+				@Override
+				public void run() {
+					completeAndWrite();
+				}
+			});
+		}
 	}
 
 	public Streamer order(final String url) {
-		final Observable<String> observable = asyncGet(url);
-		if (endOfRequest != null) {
-			endOfRequest = observable;
-			write(endOfRequest);
-		} else {
-			endOfRequest.map(new Func1<String, String>() {
-				@Override
-				public String call(String result) {
-					write(observable);
-					return null;
-				}
+		ListenableFuture<String> waitingResponse = asyncGet(url);
 
-			});
-		}
+		// podia ser qualquer coisa aqui
+		final JPromise<Integer> myPromise = JPromise.apply();
+		waitingResponse.addListener(new ResponseWriter(myPromise, waitingResponse), Executors.newFixedThreadPool(2));
 		return this;
 
 	}
 
-	private Observable<String> asyncGet(final String url) {
+	private ListenableFuture<String> asyncGet(final String url) {
 		final BoundRequestBuilder startGet = client.prepareGet(url);
 		// FIXME maybe there is another way to do this. Associate these cookies
 		// with the client instead to copy to every request.
 		mergeCookies(startGet);
-		return Observable.create(new OnSubscribe<String>() {
+		try {
+			ListenableFuture<String> executing = startGet.execute(new AsyncCompletionHandler<String>() {
 
-			@Override
-			public void call(final Subscriber<? super String> subscriber) {
-				try {
-					startGet.execute(new AsyncCompletionHandler<String>() {
-
-						@Override
-						public String onCompleted(Response asyncResponse) throws Exception {
-							logger.debug("Receiving response from url {}", url);
-							String htmlContent = asyncResponse.getResponseBody();
-							subscriber.onNext(htmlContent);
-							return htmlContent;
-						}
-					});
-				} catch (Exception e) {
-					subscriber.onError(e);
+				@Override
+				public String onCompleted(Response asyncResponse) throws Exception {
+					logger.debug("Receiving response from url {}", url);
+					String htmlContent = asyncResponse.getResponseBody();
+					return htmlContent;
 				}
-			}
-		});
+			});
+			return executing;
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	private void mergeCookies(BoundRequestBuilder startGet) {
@@ -129,47 +153,22 @@ public class Streamer {
 	}
 
 	public Streamer unOrder(String... urls) {
-		final ReplaySubject<String> subject = ReplaySubject.create();
 		for (String url : urls) {
-			Observable<String> observable = asyncGet(url);
-			observable.subscribe(new Action1<String>() {
-				@Override
-				public void call(String t1) {
-					subject.onNext(t1);
-				}
-			});
+			ListenableFuture<String> executing = asyncGet(url);
+			JPromise<Integer> promise = JPromise.<Integer> apply();
+			executing.addListener(new ResponseWriter(promise, executing), Executors.newFixedThreadPool(2));
 		}
-		this.endOfRequest = this.endOfRequest.map(new Func1<String, String>() {
-			@Override
-			public String call(String t1) {
-				write(subject);
-				return null;
-			}
-		});
 		return this;
 	}
 
 	public void await() {
-		// TODO wait for endOfRequest completion!!!
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(6000);
+			System.out.println(queue.size());
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		result.nothing();
-	}
-	
-	private void write(Observable<String> observable) {
-		observable.subscribe(new Action1<String>() {
-			@Override
-			public void call(String t1) {
-				try {
-					response.getWriter().print(t1);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		});
 	}
 
 }
