@@ -1,44 +1,30 @@
 package br.com.caelum.vraptor.streamablepages;
 
-import java.io.IOException;
-import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import br.com.caelum.blockingpromises.JPromise;
 import br.com.caelum.vraptor.Result;
 import br.com.caelum.vraptor.proxy.CDIProxies;
 
-import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.ListenableFuture;
-import com.ning.http.client.Response;
 
 @RequestScoped
 public class Streamer {
 
 	private HttpServletResponse response;
-	private AsyncHttpClient client = new AsyncHttpClient();
-	private Set<com.ning.http.client.cookie.Cookie> ningCookies = new HashSet<>();
-	private HttpServletRequest request;
-	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
+	private AsyncHttpClient client = new AsyncHttpClient();	
 	private Result result;
 	private LinkedList<JPromise<Integer>> queue = new LinkedList<>();
 	private CountDownLatch requestsCount = new CountDownLatch(0);
+	private PageletRequester pageletRequester;
 
 	@Deprecated
 	public Streamer() {
@@ -46,33 +32,17 @@ public class Streamer {
 	}
 
 	@Inject
-	public Streamer(HttpServletResponse response, HttpServletRequest request, Result result) {
+	public Streamer(HttpServletResponse response, Result result,PageletRequester pageletRequester) {
 		super();
 		this.result = result;
+		this.pageletRequester = pageletRequester;
 		this.response = CDIProxies.unproxifyIfPossible(response);
-		this.request = CDIProxies.unproxifyIfPossible(request);
 
 	}
 
 	@PreDestroy
 	public void release() {
 		client.close();
-	}
-
-	@PostConstruct
-	public void postConstruct() {
-		saveCookiesToUseInRequests(request.getCookies());
-	}
-
-	private void saveCookiesToUseInRequests(Cookie[] cookies) {
-		for (Cookie cookie : cookies) {
-			// FIXME I did not find a way to get the expires information from
-			// servlet cookie. Maybe reading request header?
-			ningCookies.add(new com.ning.http.client.cookie.Cookie(cookie.getName(), cookie.getValue(), cookie
-					.getValue(), cookie.getDomain(), cookie.getPath(), cookie.getMaxAge(), cookie.getMaxAge(), cookie
-					.getSecure(), cookie.isHttpOnly()));
-		}
-
 	}
 
 	private class ResponseWriter implements Runnable {
@@ -100,7 +70,6 @@ public class Streamer {
 		}
 
 		private void completeAndWrite() {
-			System.out.println("escrevendo...");
 			try {
 				response.getOutputStream().println(listener.get());
 				response.flushBuffer();
@@ -133,7 +102,7 @@ public class Streamer {
 	}
 
 	public Streamer order(final String url) {
-		ListenableFuture<String> waitingResponse = asyncGet(url);
+		ListenableFuture<String> waitingResponse = pageletRequester.get(url);
 
 		// podia ser qualquer coisa aqui
 		final JPromise<Integer> myPromise = JPromise.apply();
@@ -145,33 +114,6 @@ public class Streamer {
 
 	private void incRequestsCount() {
 		this.requestsCount = new CountDownLatch((int) (requestsCount.getCount() + 1));
-	}
-
-	private ListenableFuture<String> asyncGet(final String url) {
-		final BoundRequestBuilder startGet = client.prepareGet(url);
-		// FIXME maybe there is another way to do this. Associate these cookies
-		// with the client instead to copy to every request.
-		mergeCookies(startGet);
-		try {
-			ListenableFuture<String> executing = startGet.execute(new AsyncCompletionHandler<String>() {
-
-				@Override
-				public String onCompleted(Response asyncResponse) throws Exception {
-					logger.debug("Receiving response from url {}", url);
-					String htmlContent = asyncResponse.getResponseBody();
-					return htmlContent;
-				}
-			});
-			return executing;
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private void mergeCookies(BoundRequestBuilder startGet) {
-		for (com.ning.http.client.cookie.Cookie cookie : ningCookies) {
-			startGet.addCookie(cookie);
-		}
 	}
 
 	public Streamer unOrder(String... urls) {
@@ -188,7 +130,7 @@ public class Streamer {
 
 		for (String url : urls) {
 			incRequestsCount();
-			ListenableFuture<String> executing = asyncGet(url);
+			ListenableFuture<String> executing = pageletRequester.get(url);
 			JPromise<Integer> promise = JPromise.<Integer> apply();
 			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing, new Runnable() {
 
