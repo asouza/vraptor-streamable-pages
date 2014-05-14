@@ -1,10 +1,10 @@
 package br.com.caelum.vraptor.streamablepages;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedList;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
 import javax.annotation.PostConstruct;
@@ -37,7 +37,7 @@ public class Streamer {
 	private HttpServletRequest request;
 	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
 	private Result result;
-	private List<JPromise<Integer>> queue = new ArrayList<>();
+	private LinkedList<JPromise<Integer>> queue = new LinkedList<>();
 
 	@Deprecated
 	public Streamer() {
@@ -78,19 +78,29 @@ public class Streamer {
 
 		private JPromise<Integer> waitingRequestPromise;
 		private ListenableFuture<String> listener;
+		private JPromise<Integer> externalBlockingPromise;
+		private Runnable afterComplete;
 
 		public ResponseWriter(JPromise<Integer> promise, ListenableFuture<String> listener) {
-			super();
+			this(null, promise, listener,new Runnable() {public void run() {}});
+		}
+
+		public ResponseWriter(JPromise<Integer> externalBlockingPromise, JPromise<Integer> promise,
+				ListenableFuture<String> executing,Runnable afterComplete) {
+			this.externalBlockingPromise = externalBlockingPromise;
 			this.waitingRequestPromise = promise;
-			this.listener = listener;
+			this.listener = executing;
+			this.afterComplete = afterComplete;
 			queue.add(promise);
 		}
 
 		private void completeAndWrite() {
 			System.out.println("escrevendo...");
 			try {
-				response.getWriter().print(listener.get());
+				response.getOutputStream().println(listener.get());
+				response.flushBuffer();
 				waitingRequestPromise.success(1);
+				afterComplete.run();
 			} catch (Exception exception) {
 				throw new RuntimeException(exception);
 			}
@@ -101,9 +111,11 @@ public class Streamer {
 			int index = queue.indexOf(waitingRequestPromise);
 			if (index == 0) {
 				completeAndWrite();
+				return;
 			}
 
-			JPromise<Integer> blockingPromise = queue.get(index - 1);
+			JPromise<Integer> blockingPromise = externalBlockingPromise == null ? queue.get(index - 1)
+					: externalBlockingPromise;
 
 			// se tem um outra na fila, espera
 			blockingPromise.onSuccess(new Runnable() {
@@ -153,11 +165,35 @@ public class Streamer {
 	}
 
 	public Streamer unOrder(String... urls) {
+		JPromise<Integer> blockingPromise = JPromise.<Integer> apply();
+		if (queue.isEmpty()) {
+			blockingPromise.success(1);
+		} else {
+			blockingPromise = queue.getLast();
+		}
+		
+		final CountDownLatch countDownLatch = new CountDownLatch(urls.length);
+		
+		final JPromise<Integer> asyncRequestsBlocker = JPromise.<Integer>apply();
+		
 		for (String url : urls) {
 			ListenableFuture<String> executing = asyncGet(url);
 			JPromise<Integer> promise = JPromise.<Integer> apply();
-			executing.addListener(new ResponseWriter(promise, executing), Executors.newFixedThreadPool(2));
+			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing,new Runnable() {
+				
+				@Override
+				public void run() {
+					countDownLatch.countDown();
+					if(countDownLatch.getCount() == 0){
+						asyncRequestsBlocker.success(1);
+					}					
+				}
+			});
+			executing.addListener(writer,
+					Executors.newFixedThreadPool(2));
 		}
+		
+		queue.add(asyncRequestsBlocker);
 		return this;
 	}
 
