@@ -2,6 +2,7 @@ package br.com.caelum.vraptor.streamablepages;
 
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.annotation.PreDestroy;
@@ -19,6 +20,8 @@ import com.ning.http.client.ListenableFuture;
 @RequestScoped
 public class Streamer {
 
+	//just a guess...
+	private static final ExecutorService WAITING_RESPONSE_POOL = Executors.newFixedThreadPool(5);
 	private HttpServletResponse response;
 	private AsyncHttpClient client = new AsyncHttpClient();	
 	private Result result;
@@ -106,7 +109,7 @@ public class Streamer {
 
 		// podia ser qualquer coisa aqui
 		final JPromise<Integer> myPromise = JPromise.apply();
-		waitingResponse.addListener(new ResponseWriter(myPromise, waitingResponse), Executors.newFixedThreadPool(2));
+		waitingResponse.addListener(new ResponseWriter(myPromise, waitingResponse), WAITING_RESPONSE_POOL);
 		incRequestsCount();
 		return this;
 
@@ -143,7 +146,7 @@ public class Streamer {
 					}
 				}
 			});
-			executing.addListener(writer, Executors.newFixedThreadPool(2));
+			executing.addListener(writer, WAITING_RESPONSE_POOL);
 		}
 
 		queue.add(asyncRequestsBlocker);
