@@ -8,6 +8,7 @@ import javax.servlet.ServletContext;
 
 import br.com.caelum.vraptor.http.route.Router;
 import br.com.caelum.vraptor.proxy.Proxifier;
+import br.com.caelum.vraptor.streamablepages.PageletUrlBuilder;
 import br.com.caelum.vraptor.streamablepages.Streamer;
 
 public class StreamedResult {
@@ -16,7 +17,7 @@ public class StreamedResult {
 	private final List<StreamedResultProxifier<?>> invocations;
 	private final Streamer streamer;
 	private final Router router;
-	private final String contextPath;
+	private PageletUrlBuilder pageletUrlBuilder;
 	
 	@Deprecated
 	StreamedResult() {
@@ -24,11 +25,11 @@ public class StreamedResult {
 	}
 
 	@Inject
-	public StreamedResult(Proxifier proxifier, Router router, Streamer streamer, ServletContext context) {
+	public StreamedResult(Proxifier proxifier, Router router, Streamer streamer, PageletUrlBuilder pageletUrlBuilder) {
 		this.proxifier = proxifier;
 		this.router = router;
 		this.streamer = streamer;
-		this.contextPath = context.getContextPath();
+		this.pageletUrlBuilder = pageletUrlBuilder;
 		this.invocations = new ArrayList<>();
 	}
 
@@ -41,10 +42,8 @@ public class StreamedResult {
 	public void startStream() {
 		ArrayList<String> paths = new ArrayList<String>();
 		for (StreamedResultProxifier<?> invocation : invocations) {
-			String path = "http://localhost:8080" + contextPath + invocation.getUrl();
-			paths.add(path);
+			paths.add(pageletUrlBuilder.build(invocation.getUrl()));
 		}
-		System.out.println(paths);
 		streamer.unOrder(paths.toArray(new String[paths.size()]));
 	}
 

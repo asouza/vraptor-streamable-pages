@@ -28,6 +28,7 @@ public class Streamer {
 	private LinkedList<JPromise<Integer>> pipeline = new LinkedList<>();
 	private CountDownLatch requestsCount = new CountDownLatch(0);
 	private PageletRequester pageletRequester;
+	private PageletUrlBuilder pageletUrlBuilder; 
 
 	@Deprecated
 	public Streamer() {
@@ -35,10 +36,11 @@ public class Streamer {
 	}
 
 	@Inject
-	public Streamer(HttpServletResponse response, Result result,PageletRequester pageletRequester) {
+	public Streamer(HttpServletResponse response, Result result,PageletRequester pageletRequester,PageletUrlBuilder pageletUrlBuilder) {
 		super();
 		this.result = result;
 		this.pageletRequester = pageletRequester;
+		this.pageletUrlBuilder = pageletUrlBuilder;
 		this.response = CDIProxies.unproxifyIfPossible(response);
 
 	}
@@ -105,7 +107,7 @@ public class Streamer {
 	}
 
 	public Streamer order(final String url) {
-		ListenableFuture<String> waitingResponse = pageletRequester.get(url);
+		ListenableFuture<String> waitingResponse = pageletRequester.get(pageletUrlBuilder.build(url));
 
 		// podia ser qualquer coisa aqui
 		final JPromise<Integer> myPromise = JPromise.apply();
@@ -133,7 +135,7 @@ public class Streamer {
 
 		for (String url : urls) {	
 			incRequestsCount();
-			ListenableFuture<String> executing = pageletRequester.get(url);
+			ListenableFuture<String> executing = pageletRequester.get(pageletUrlBuilder.build(url));
 			JPromise<Integer> promise = JPromise.<Integer> apply();
 			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing, new Runnable() {
 
@@ -160,6 +162,11 @@ public class Streamer {
 			throw new RuntimeException(e);
 		}
 		result.nothing();
+	}
+
+	public Streamer local(int port) {
+		this.pageletUrlBuilder.local(port);
+		return this;
 	}
 
 }
