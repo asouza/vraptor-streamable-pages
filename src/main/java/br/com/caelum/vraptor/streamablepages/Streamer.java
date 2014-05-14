@@ -38,6 +38,7 @@ public class Streamer {
 	private static final Logger logger = LoggerFactory.getLogger(Streamer.class);
 	private Result result;
 	private LinkedList<JPromise<Integer>> queue = new LinkedList<>();
+	private CountDownLatch requestsCount = new CountDownLatch(0);
 
 	@Deprecated
 	public Streamer() {
@@ -82,11 +83,15 @@ public class Streamer {
 		private Runnable afterComplete;
 
 		public ResponseWriter(JPromise<Integer> promise, ListenableFuture<String> listener) {
-			this(null, promise, listener,new Runnable() {public void run() {}});
+			this(null, promise, listener, new Runnable() {
+				public void run() {
+					requestsCount.countDown();
+				}
+			});
 		}
 
 		public ResponseWriter(JPromise<Integer> externalBlockingPromise, JPromise<Integer> promise,
-				ListenableFuture<String> executing,Runnable afterComplete) {
+				ListenableFuture<String> executing, Runnable afterComplete) {
 			this.externalBlockingPromise = externalBlockingPromise;
 			this.waitingRequestPromise = promise;
 			this.listener = executing;
@@ -133,8 +138,13 @@ public class Streamer {
 		// podia ser qualquer coisa aqui
 		final JPromise<Integer> myPromise = JPromise.apply();
 		waitingResponse.addListener(new ResponseWriter(myPromise, waitingResponse), Executors.newFixedThreadPool(2));
+		incRequestsCount();
 		return this;
 
+	}
+
+	private void incRequestsCount() {
+		this.requestsCount = new CountDownLatch((int) (requestsCount.getCount() + 1));
 	}
 
 	private ListenableFuture<String> asyncGet(final String url) {
@@ -171,38 +181,38 @@ public class Streamer {
 		} else {
 			blockingPromise = queue.getLast();
 		}
-		
-		final CountDownLatch countDownLatch = new CountDownLatch(urls.length);
-		
-		final JPromise<Integer> asyncRequestsBlocker = JPromise.<Integer>apply();
-		
+
+		final CountDownLatch asyncRequestsBlockCounter = new CountDownLatch(urls.length);
+
+		final JPromise<Integer> asyncRequestsBlocker = JPromise.<Integer> apply();
+
 		for (String url : urls) {
+			incRequestsCount();
 			ListenableFuture<String> executing = asyncGet(url);
 			JPromise<Integer> promise = JPromise.<Integer> apply();
-			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing,new Runnable() {
-				
+			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing, new Runnable() {
+
 				@Override
 				public void run() {
-					countDownLatch.countDown();
-					if(countDownLatch.getCount() == 0){
+					asyncRequestsBlockCounter.countDown();
+					requestsCount.countDown();
+					if (asyncRequestsBlockCounter.getCount() == 0) {
 						asyncRequestsBlocker.success(1);
-					}					
+					}
 				}
 			});
-			executing.addListener(writer,
-					Executors.newFixedThreadPool(2));
+			executing.addListener(writer, Executors.newFixedThreadPool(2));
 		}
-		
+
 		queue.add(asyncRequestsBlocker);
 		return this;
 	}
 
 	public void await() {
 		try {
-			Thread.sleep(6000);
-			System.out.println(queue.size());
+			requestsCount.await();
 		} catch (InterruptedException e) {
-			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 		result.nothing();
 	}
