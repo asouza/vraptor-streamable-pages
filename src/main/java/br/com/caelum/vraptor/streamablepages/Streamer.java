@@ -25,7 +25,7 @@ public class Streamer {
 	private HttpServletResponse response;
 	private AsyncHttpClient client = new AsyncHttpClient();	
 	private Result result;
-	private LinkedList<JPromise<Integer>> queue = new LinkedList<>();
+	private LinkedList<JPromise<Integer>> pipeline = new LinkedList<>();
 	private CountDownLatch requestsCount = new CountDownLatch(0);
 	private PageletRequester pageletRequester;
 
@@ -69,7 +69,7 @@ public class Streamer {
 			this.waitingRequestPromise = promise;
 			this.listener = executing;
 			this.afterComplete = afterComplete;
-			queue.add(promise);
+			pipeline.add(promise);
 		}
 
 		private void completeAndWrite() {
@@ -85,13 +85,13 @@ public class Streamer {
 
 		@Override
 		public void run() {
-			int index = queue.indexOf(waitingRequestPromise);
+			int index = pipeline.indexOf(waitingRequestPromise);
 			if (index == 0) {
 				completeAndWrite();
 				return;
 			}
 
-			JPromise<Integer> blockingPromise = externalBlockingPromise == null ? queue.get(index - 1)
+			JPromise<Integer> blockingPromise = externalBlockingPromise == null ? pipeline.get(index - 1)
 					: externalBlockingPromise;
 
 			// se tem um outra na fila, espera
@@ -121,17 +121,17 @@ public class Streamer {
 
 	public Streamer unOrder(String... urls) {
 		JPromise<Integer> blockingPromise = JPromise.<Integer> apply();
-		if (queue.isEmpty()) {
+		if (pipeline.isEmpty()) {
 			blockingPromise.success(1);
 		} else {
-			blockingPromise = queue.getLast();
+			blockingPromise = pipeline.getLast();
 		}
 
 		final CountDownLatch asyncRequestsBlockCounter = new CountDownLatch(urls.length);
 
 		final JPromise<Integer> asyncRequestsBlocker = JPromise.<Integer> apply();
 
-		for (String url : urls) {
+		for (String url : urls) {	
 			incRequestsCount();
 			ListenableFuture<String> executing = pageletRequester.get(url);
 			JPromise<Integer> promise = JPromise.<Integer> apply();
@@ -149,7 +149,7 @@ public class Streamer {
 			executing.addListener(writer, WAITING_RESPONSE_POOL);
 		}
 
-		queue.add(asyncRequestsBlocker);
+		pipeline.add(asyncRequestsBlocker);
 		return this;
 	}
 
