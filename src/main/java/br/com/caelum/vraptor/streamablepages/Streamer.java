@@ -8,6 +8,7 @@ import javax.inject.Named;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspWriter;
+import javax.servlet.jsp.PageContext;
 
 import br.com.caelum.vraptor.Result;
 import br.com.caelum.vraptor.streamablepages.writer.ClientWriter;
@@ -43,7 +44,8 @@ public class Streamer {
 		return this;
 	}
 
-	public Streamer jsp(JspWriter jspWriter) {
+	public Streamer jsp(PageContext pageContext) {
+		JspWriter jspWriter = pageContext.getOut();
 		try {
 			jspWriter.flush();
 		} catch (IOException e) {
