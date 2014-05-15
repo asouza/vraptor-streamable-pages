@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.inject.Inject;
-import javax.servlet.ServletContext;
 
 import br.com.caelum.vraptor.http.route.Router;
 import br.com.caelum.vraptor.proxy.Proxifier;
@@ -44,7 +43,7 @@ public class StreamedResult {
 		for (StreamedResultProxifier<?> invocation : invocations) {
 			paths.add(pageletUrlBuilder.build(invocation.getUrl()));
 		}
-		streamer.unOrder(paths.toArray(new String[paths.size()]));
+		streamer.unorder(paths.toArray(new String[paths.size()]));
 	}
 
 }

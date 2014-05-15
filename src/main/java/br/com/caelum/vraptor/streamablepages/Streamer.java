@@ -1,172 +1,68 @@
 package br.com.caelum.vraptor.streamablepages;
 
-import java.util.LinkedList;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.io.IOException;
 
-import javax.annotation.PreDestroy;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
+import javax.inject.Named;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.jsp.JspWriter;
 
-import br.com.caelum.blockingpromises.JPromise;
 import br.com.caelum.vraptor.Result;
-import br.com.caelum.vraptor.proxy.CDIProxies;
-
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.ListenableFuture;
+import br.com.caelum.vraptor.streamablepages.writer.ClientWriter;
+import br.com.caelum.vraptor.streamablepages.writer.DefaultWriter;
+import br.com.caelum.vraptor.streamablepages.writer.JspClientWriter;
 
 @RequestScoped
+@Named
 public class Streamer {
 
-	//just a guess...
-	private static final ExecutorService WAITING_RESPONSE_POOL = Executors.newFixedThreadPool(5);
-	private HttpServletResponse response;
-	private AsyncHttpClient client = new AsyncHttpClient();	
-	private Result result;
-	private LinkedList<JPromise<Integer>> pipeline = new LinkedList<>();
-	private CountDownLatch requestsCount = new CountDownLatch(0);
-	private PageletRequester pageletRequester;
-	private PageletUrlBuilder pageletUrlBuilder; 
+	private final Result result;
+	private final PageletRequester pageletRequester;
+	private PageletUrlBuilder pageletUrlBuilder;
+	private ClientWriter clientWriter;
 
-	@Deprecated
 	public Streamer() {
-
+		this.result = null;
+		this.pageletRequester = null;
 	}
 
 	@Inject
-	public Streamer(HttpServletResponse response, Result result,PageletRequester pageletRequester,PageletUrlBuilder pageletUrlBuilder) {
+	public Streamer(Result result, PageletRequester pageletRequester, HttpServletRequest request,
+			HttpServletResponse response) {
 		super();
 		this.result = result;
 		this.pageletRequester = pageletRequester;
-		this.pageletUrlBuilder = pageletUrlBuilder;
-		this.response = CDIProxies.unproxifyIfPossible(response);
-
-	}
-
-	@PreDestroy
-	public void release() {
-		client.close();
-	}
-
-	private class ResponseWriter implements Runnable {
-
-		private JPromise<Integer> waitingRequestPromise;
-		private ListenableFuture<String> listener;
-		private JPromise<Integer> externalBlockingPromise;
-		private Runnable afterComplete;
-
-		public ResponseWriter(JPromise<Integer> promise, ListenableFuture<String> listener) {
-			this(null, promise, listener, new Runnable() {
-				public void run() {
-					requestsCount.countDown();
-				}
-			});
-		}
-
-		public ResponseWriter(JPromise<Integer> externalBlockingPromise, JPromise<Integer> promise,
-				ListenableFuture<String> executing, Runnable afterComplete) {
-			this.externalBlockingPromise = externalBlockingPromise;
-			this.waitingRequestPromise = promise;
-			this.listener = executing;
-			this.afterComplete = afterComplete;
-			pipeline.add(promise);
-		}
-
-		private void completeAndWrite() {
-			try {
-				response.getOutputStream().println(listener.get());
-				response.flushBuffer();
-				waitingRequestPromise.success(1);
-				afterComplete.run();
-			} catch (Exception exception) {
-				throw new RuntimeException(exception);
-			}
-		}
-
-		@Override
-		public void run() {
-			int index = pipeline.indexOf(waitingRequestPromise);
-			if (index == 0) {
-				completeAndWrite();
-				return;
-			}
-
-			JPromise<Integer> blockingPromise = externalBlockingPromise == null ? pipeline.get(index - 1)
-					: externalBlockingPromise;
-
-			// se tem um outra na fila, espera
-			blockingPromise.onSuccess(new Runnable() {
-				@Override
-				public void run() {
-					completeAndWrite();
-				}
-			});
-		}
-	}
-
-	public Streamer order(final String url) {
-		ListenableFuture<String> waitingResponse = pageletRequester.get(pageletUrlBuilder.build(url));
-
-		// podia ser qualquer coisa aqui
-		final JPromise<Integer> myPromise = JPromise.apply();
-		waitingResponse.addListener(new ResponseWriter(myPromise, waitingResponse), WAITING_RESPONSE_POOL);
-		incRequestsCount();
-		return this;
-
-	}
-
-	private void incRequestsCount() {
-		this.requestsCount = new CountDownLatch((int) (requestsCount.getCount() + 1));
-	}
-
-	public Streamer unOrder(String... urls) {
-		JPromise<Integer> blockingPromise = JPromise.<Integer> apply();
-		if (pipeline.isEmpty()) {
-			blockingPromise.success(1);
-		} else {
-			blockingPromise = pipeline.getLast();
-		}
-
-		final CountDownLatch asyncRequestsBlockCounter = new CountDownLatch(urls.length);
-
-		final JPromise<Integer> asyncRequestsBlocker = JPromise.<Integer> apply();
-
-		for (String url : urls) {	
-			incRequestsCount();
-			ListenableFuture<String> executing = pageletRequester.get(pageletUrlBuilder.build(url));
-			JPromise<Integer> promise = JPromise.<Integer> apply();
-			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing, new Runnable() {
-
-				@Override
-				public void run() {
-					asyncRequestsBlockCounter.countDown();
-					requestsCount.countDown();
-					if (asyncRequestsBlockCounter.getCount() == 0) {
-						asyncRequestsBlocker.success(1);
-					}
-				}
-			});
-			executing.addListener(writer, WAITING_RESPONSE_POOL);
-		}
-
-		pipeline.add(asyncRequestsBlocker);
-		return this;
-	}
-
-	public void await() {
-		try {
-			requestsCount.await();
-		} catch (InterruptedException e) {
-			throw new RuntimeException(e);
-		}
-		result.nothing();
+		this.pageletUrlBuilder = new PageletUrlBuilder(request);
+		this.clientWriter = new DefaultWriter(response);
 	}
 
 	public Streamer local(int port) {
-		this.pageletUrlBuilder.local(port);
+		pageletUrlBuilder.local(port);
 		return this;
+	}
+
+	public Streamer jsp(JspWriter jspWriter) {
+		try {
+			jspWriter.flush();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		this.clientWriter = new JspClientWriter(jspWriter);
+		return this;
+	}
+
+	public PipelineExecutor unorder(String... urls) {
+		PipelineExecutor pipelineExecutor = new PipelineExecutor(result, pageletRequester, pageletUrlBuilder,
+				clientWriter);
+		return pipelineExecutor.unorder(urls);
+	}
+
+	public PipelineExecutor order(String url) {
+		PipelineExecutor pipelineExecutor = new PipelineExecutor(result, pageletRequester, pageletUrlBuilder,
+				clientWriter);
+		return pipelineExecutor.order(url);
 	}
 
 }

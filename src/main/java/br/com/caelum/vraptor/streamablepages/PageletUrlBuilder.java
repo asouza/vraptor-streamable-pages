@@ -1,10 +1,10 @@
 package br.com.caelum.vraptor.streamablepages;
 
-import javax.enterprise.context.Dependent;
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 
-@Dependent
+@RequestScoped
 public class PageletUrlBuilder {
 
 	private HttpServletRequest request;
