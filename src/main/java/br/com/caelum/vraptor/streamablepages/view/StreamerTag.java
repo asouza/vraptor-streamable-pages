@@ -23,7 +23,6 @@ public class StreamerTag extends BodyTagSupport {
 	@Override
 	public int doEndTag() throws JspException {
 		List<String> urls = pages.getUrls();
-		System.out.println(urls);
 		streamer.local(8080).jsp(pageContext).unorder(urls.toArray(new String[]{})).await();
 		pages.clear();
 		return super.doEndTag();
