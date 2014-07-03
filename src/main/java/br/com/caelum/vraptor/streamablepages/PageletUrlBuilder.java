@@ -21,7 +21,7 @@ public class PageletUrlBuilder {
 	}
 
 	public String build(String url) {
-		return String.format(template,url);
+		return String.format(template,url.startsWith("/") ? url.replaceFirst("/","") : url);
 	}
 
 	public void local(int port) {
