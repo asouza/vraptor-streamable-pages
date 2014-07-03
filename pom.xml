@@ -103,8 +103,7 @@
 	</pluginRepositories>
 
 	<build>
-		<finalName>vraptor-blank-project</finalName>
-		<outputDirectory>${basedir}/src/main/webapp/WEB-INF/classes</outputDirectory>
+		<finalName>vraptor-streamable-pages</finalName>
 		<pluginManagement>
 			<plugins>
 				<plugin>
@@ -164,7 +163,6 @@
 				<configuration>
 					<downloadSources>true</downloadSources>
 					<downloadJavadocs>true</downloadJavadocs>
-					<wtpversion>2.0</wtpversion>
 					<sourceIncludes>
 						<sourceInclude>**/*.scala</sourceInclude>
 					</sourceIncludes>
