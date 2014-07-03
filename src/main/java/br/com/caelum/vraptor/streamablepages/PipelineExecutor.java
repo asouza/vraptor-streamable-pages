@@ -9,7 +9,7 @@ import javax.annotation.PreDestroy;
 import javax.enterprise.inject.Vetoed;
 import javax.inject.Inject;
 
-import br.com.caelum.blockingpromises.JPromise;
+import br.com.caelum.vraptor.streamablepages.jpromises.JPromise;
 import br.com.caelum.vraptor.Result;
 import br.com.caelum.vraptor.streamablepages.writer.ClientWriter;
 
