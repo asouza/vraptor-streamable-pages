@@ -81,6 +81,27 @@
 			<version>1.9.0</version>
 			<scope>test</scope>
 		</dependency>
+		
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<version>3.2.4.RELEASE</version>
+			<scope>test</scope>
+		</dependency>	
+		
+		<dependency>
+			<groupId>io.undertow</groupId>
+			<artifactId>undertow-core</artifactId>
+			<version>1.0.1.Final</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.undertow</groupId>
+			<artifactId>undertow-servlet</artifactId>
+			<version>1.0.1.Final</version>
+			<scope>test</scope>
+		</dependency>				
 
 
 

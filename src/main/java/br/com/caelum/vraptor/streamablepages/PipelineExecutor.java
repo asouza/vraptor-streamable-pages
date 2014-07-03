@@ -22,7 +22,6 @@ public class PipelineExecutor {
 	//just a guess...
 	private static final ExecutorService WAITING_RESPONSE_POOL = Executors.newFixedThreadPool(5);
 	private AsyncHttpClient client = new AsyncHttpClient();	
-	private Result result;
 	private LinkedList<JPromise<Integer>> pipeline = new LinkedList<>();
 	private CountDownLatch requestsCount = new CountDownLatch(0);
 	private PageletRequester pageletRequester;
@@ -33,10 +32,9 @@ public class PipelineExecutor {
 	public PipelineExecutor() {}
 
 	@Inject
-	public PipelineExecutor(Result result, PageletRequester pageletRequester, PageletUrlBuilder pageletUrlBuilder,
+	public PipelineExecutor(PageletRequester pageletRequester, PageletUrlBuilder pageletUrlBuilder,
 			ClientWriter clientWriter) {
 		super();
-		this.result = result;
 		this.pageletRequester = pageletRequester;
 		this.pageletUrlBuilder = pageletUrlBuilder;
 		this.clientWriter = clientWriter;
@@ -152,7 +150,6 @@ public class PipelineExecutor {
 		} catch (InterruptedException e) {
 			throw new RuntimeException(e);
 		}
-		result.nothing();
 	}	
 	
 	@PreDestroy
