@@ -9,6 +9,18 @@
 
 	<description>Compose your complex pages with small jsps instead of write a big one.</description>
 
+    <parent>
+        <groupId>org.sonatype.oss</groupId>
+        <artifactId>oss-parent</artifactId>
+        <version>7</version>
+    </parent>
+
+    <scm>
+        <url>http://github.com/asouza/vraptor-streamable-pages</url>
+        <connection>scm:git:git://github.com/asouza/vraptor-streamable-pages</connection>
+        <developerConnection>scm:git:git@github.com:asouza/vraptor-streamable-pages.git</developerConnection>
+    </scm>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<weld.version>2.1.2.Final</weld.version>
