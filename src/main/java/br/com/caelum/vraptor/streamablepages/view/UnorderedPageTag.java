@@ -14,7 +14,6 @@ public class UnorderedPageTag extends BodyTagSupport {
 	public int doStartTag() throws JspException {
 		pages = CDI.current().select(PagesToStream.class).get();
 		pages.add(url);
-		System.out.println(url);
 		return super.doStartTag();
 	}
 	
