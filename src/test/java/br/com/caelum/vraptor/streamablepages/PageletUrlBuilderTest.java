@@ -18,7 +18,7 @@ public class PageletUrlBuilderTest {
 	@Before
 	public void setup() {
 		this.request = mock(HttpServletRequest.class);
-		when(request.getContextPath()).thenReturn("context");
+		when(request.getContextPath()).thenReturn("/context");
 	}
 
 	@Test

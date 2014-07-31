@@ -26,7 +26,6 @@ public class PageletUrlBuilder {
 
 	public void local(int port) {
 		String contextPath = request.getContextPath();
-		contextPath = contextPath.startsWith("/") ? contextPath : "/"+contextPath;
 		this.template = "http://localhost:"+port+""+contextPath+"/%s";
 	}
 
