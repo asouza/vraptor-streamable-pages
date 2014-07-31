@@ -4,6 +4,18 @@ This projects aims to enable async rendering of htmls using VRaptor. The
 inspiration came from this Linkedin
 talk(http://engineering.linkedin.com/play/composable-and-streamable-play-apps).
 
+#Configuring
+
+If you are using maven, simply add the following dependency:
+
+```xml
+<dependency>
+    <groupId>br.com.caelum.vraptor</groupId>
+    <artifactId>vraptor-streamable-pages</artifactId>
+    <version>4.0.0</version>
+</dependency>
+```
+
 #Example    
 
 Take a look on this example:
