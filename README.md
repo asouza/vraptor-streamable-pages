@@ -12,7 +12,7 @@ If you are using maven, simply add the following dependency:
 <dependency>
     <groupId>br.com.caelum.vraptor</groupId>
     <artifactId>vraptor-streamable-pages</artifactId>
-    <version>4.0.0</version>
+    <version>4.0.1</version>
 </dependency>
 ```
 
