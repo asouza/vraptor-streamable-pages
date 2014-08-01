@@ -23,9 +23,25 @@ public class StreamerTag extends BodyTagSupport {
 	@Override
 	public int doEndTag() throws JspException {
 		List<String> urls = pages.getUrls();
-		streamer.local(8080).jsp(pageContext).unorder(urls.toArray(new String[]{})).await();
+		streamer.local(getPort()).jsp(pageContext).unorder(urls.toArray(new String[]{})).await();
 		pages.clear();
 		return super.doEndTag();
 	}
-	
+
+	private int getPort() {
+		String port = System.getenv("PORT");
+		if (port != null) {
+			return parse(port);
+		}
+		return 8080;
+	}
+
+	private int parse(String port) {
+		try {
+			return Integer.parseInt(port);
+		} catch (NumberFormatException e) {
+			return 8080;
+		}
+	}
+
 }
