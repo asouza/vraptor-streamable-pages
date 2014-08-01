@@ -33,7 +33,7 @@ public class StreamerTag extends BodyTagSupport {
 		if (port != null) {
 			return parse(port);
 		}
-		return 8080;
+		return parse(System.getProperty("server.port", "8080"));
 	}
 
 	private int parse(String port) {
