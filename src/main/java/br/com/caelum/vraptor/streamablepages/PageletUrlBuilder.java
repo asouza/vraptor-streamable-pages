@@ -11,12 +11,11 @@ public class PageletUrlBuilder {
 	private String template = "%s";
 
 	@Deprecated
-	public PageletUrlBuilder() {
+	protected PageletUrlBuilder() {
 	}
 
 	@Inject
 	public PageletUrlBuilder(HttpServletRequest request) {
-		super();
 		this.request = request;
 	}
 
