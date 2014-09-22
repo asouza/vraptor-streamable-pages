@@ -59,8 +59,7 @@ public class PageletRequester {
 				@Override
 				public String onCompleted(Response asyncResponse) throws Exception {
 					logger.debug("Receiving response from url {}", url);
-					String htmlContent = asyncResponse.getResponseBody();
-					return htmlContent;
+					return asyncResponse.getResponseBody();
 				}
 			});
 			return executing;
