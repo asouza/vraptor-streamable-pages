@@ -13,13 +13,11 @@ import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import br.com.caelum.vraptor.proxy.CDIProxies;
-
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Response;
-import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 
 @RequestScoped
 public class PageletRequester {
@@ -35,7 +33,7 @@ public class PageletRequester {
 	@Inject
 	public PageletRequester(HttpServletRequest request) {
 		super();
-		this.request = CDIProxies.unproxifyIfPossible(request);
+		this.request = request;
 	}
 
 	@PostConstruct

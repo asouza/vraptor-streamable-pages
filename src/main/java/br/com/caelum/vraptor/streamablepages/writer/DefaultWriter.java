@@ -6,8 +6,6 @@ import javax.enterprise.inject.Vetoed;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
 
-import br.com.caelum.vraptor.proxy.CDIProxies;
-
 @Vetoed
 public class DefaultWriter implements ClientWriter {
 
@@ -16,7 +14,7 @@ public class DefaultWriter implements ClientWriter {
 	@Inject
 	public DefaultWriter(HttpServletResponse response) {
 		super();
-		this.response = CDIProxies.unproxifyIfPossible(response);
+		this.response = response;
 	}
 
 	@Override

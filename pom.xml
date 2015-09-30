@@ -24,26 +24,21 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<weld.version>2.1.2.Final</weld.version>
-		<vraptor.version>4.0.0.Final</vraptor.version>
 	</properties>
 
 	<dependencies>
 		<dependency>
-			<groupId>br.com.caelum</groupId>
-			<artifactId>vraptor</artifactId>
-			<version>${vraptor.version}</version>
-		</dependency>
-
-		<dependency>
 			<groupId>org.jboss.weld.servlet</groupId>
 			<artifactId>weld-servlet-core</artifactId>
 			<version>${weld.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.jboss.weld</groupId>
 			<artifactId>weld-core-impl</artifactId>
 			<version>${weld.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<dependency>

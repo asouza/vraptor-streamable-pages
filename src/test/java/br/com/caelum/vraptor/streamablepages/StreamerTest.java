@@ -25,29 +25,35 @@ public class StreamerTest {
 
 	private static class OrderStreamerServlet extends HttpServlet {
 		@Override
-		protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException,
+		protected void service(HttpServletRequest request,
+				HttpServletResponse response) throws ServletException,
 				IOException {
-			Streamer streamer = new Streamer(new PageletRequester(request), request, response);
+			Streamer streamer = new Streamer(new PageletRequester(request),
+					request, response);
 			streamer.order("http://localhost:8080/test/header")
 					.order("http://localhost:8080/test/footer").await();
-			
+
 		}
 	}
-	
+
 	private static class UnorderStreamerServlet extends HttpServlet {
 		@Override
-		protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException,
-		IOException {
-			Streamer streamer = new Streamer(new PageletRequester(request), request, response);
+		protected void service(HttpServletRequest request,
+				HttpServletResponse response) throws ServletException,
+				IOException {
+			Streamer streamer = new Streamer(new PageletRequester(request),
+					request, response);
 			streamer.order("http://localhost:8080/test/header")
-			.unorder("http://localhost:8080/test/pagelet1","http://localhost:8080/test/pagelet2")
-			.order("http://localhost:8080/test/footer").await();
-			
+					.unorder("http://localhost:8080/test/pagelet1",
+							"http://localhost:8080/test/pagelet2")
+					.order("http://localhost:8080/test/footer").await();
+
 		}
 	}
 
 	@Test
-	public void shouldRespectTheOrder() throws IOException, InterruptedException, ExecutionException {
+	public void shouldRespectTheOrder() throws IOException,
+			InterruptedException, ExecutionException {
 		Undertow server = FakeServer.start(OrderStreamerServlet.class);
 		String response = request();
 		assertEquals("headerfooter", response);
@@ -55,21 +61,26 @@ public class StreamerTest {
 
 	}
 
-	private String request() throws IOException, InterruptedException, ExecutionException {
-		AsyncHttpClient client = new AsyncHttpClient();
-		ListenableFuture<Response> execute = client.prepareGet("http://localhost:8080/test/streamer").execute();
-		String response = execute.get().getResponseBody();
-		return response;
+	private String request() throws IOException, InterruptedException,
+			ExecutionException {
+		try (AsyncHttpClient client = new AsyncHttpClient()) {
+			ListenableFuture<Response> execute = client.prepareGet(
+					"http://localhost:8080/test/streamer").execute();
+			String response = execute.get().getResponseBody();
+			return response;
+		}
 	}
-	
+
 	@Test
-	public void shouldRespectTheUnorder() throws IOException, InterruptedException, ExecutionException {
+	public void shouldRespectTheUnorder() throws IOException,
+			InterruptedException, ExecutionException {
 		Undertow server = FakeServer.start(UnorderStreamerServlet.class);
 		String response = request();
 		assertTrue(response.startsWith("header"));
 		assertTrue(response.endsWith("footer"));
-		assertTrue(response.contains("pagelet1") && response.contains("pagelet2"));
+		assertTrue(response.contains("pagelet1")
+				&& response.contains("pagelet2"));
 		server.stop();
-		
+
 	}
 }
