@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>br.com.caelum.vraptor</groupId>
@@ -8,17 +9,17 @@
 
 	<description>Compose your complex pages with small jsps instead of write a big one.</description>
 
-    <parent>
-        <groupId>org.sonatype.oss</groupId>
-        <artifactId>oss-parent</artifactId>
-        <version>7</version>
-    </parent>
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
 
-    <scm>
-        <url>http://github.com/asouza/vraptor-streamable-pages</url>
-        <connection>scm:git:git://github.com/asouza/vraptor-streamable-pages</connection>
-        <developerConnection>scm:git:git@github.com:asouza/vraptor-streamable-pages.git</developerConnection>
-    </scm>
+	<scm>
+		<url>http://github.com/asouza/vraptor-streamable-pages</url>
+		<connection>scm:git:git://github.com/asouza/vraptor-streamable-pages</connection>
+		<developerConnection>scm:git:git@github.com:asouza/vraptor-streamable-pages.git</developerConnection>
+	</scm>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -74,12 +75,6 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.scala-lang</groupId>
-			<artifactId>scala-library</artifactId>
-			<version>2.10.4</version>
-		</dependency>
-
-		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.11</version>
@@ -92,7 +87,7 @@
 			<version>1.9.0</version>
 			<scope>test</scope>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>io.undertow</groupId>
 			<artifactId>undertow-core</artifactId>
@@ -105,36 +100,16 @@
 			<artifactId>undertow-servlet</artifactId>
 			<version>1.0.1.Final</version>
 			<scope>test</scope>
-		</dependency>				
+		</dependency>
 
 
 
 	</dependencies>
 
-	<repositories>
-		<repository>
-			<id>scala-tools.org</id>
-			<name>Scala-tools Maven2 Repository</name>
-			<url>http://scala-tools.org/repo-releases</url>
-		</repository>
-	</repositories>
-
-	<pluginRepositories>
-		<pluginRepository>
-			<id>scala-tools.org</id>
-			<name>Scala-tools Maven2 Repository</name>
-			<url>http://scala-tools.org/repo-releases</url>
-		</pluginRepository>
-	</pluginRepositories>
-
 	<build>
 		<finalName>vraptor-streamable-pages</finalName>
 		<pluginManagement>
 			<plugins>
-				<plugin>
-					<groupId>org.scala-tools</groupId>
-					<artifactId>maven-scala-plugin</artifactId>
-				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
@@ -143,27 +118,6 @@
 			</plugins>
 		</pluginManagement>
 		<plugins>
-			<plugin>
-				<groupId>org.scala-tools</groupId>
-				<artifactId>maven-scala-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>scala-compile-first</id>
-						<phase>process-resources</phase>
-						<goals>
-							<goal>add-source</goal>
-							<goal>compile</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>scala-test-compile</id>
-						<phase>process-test-resources</phase>
-						<goals>
-							<goal>testCompile</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -177,8 +131,8 @@
 				</executions>
 				<version>3.1</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.8</source>
+					<target>1.8</target>
 				</configuration>
 			</plugin>
 
@@ -188,55 +142,9 @@
 				<configuration>
 					<downloadSources>true</downloadSources>
 					<downloadJavadocs>true</downloadJavadocs>
-					<sourceIncludes>
-						<sourceInclude>**/*.scala</sourceInclude>
-					</sourceIncludes>
-					<buildcommands>
-						<buildcommand>ch.epfl.lamp.sdt.core.scalabuilder</buildcommand>
-					</buildcommands>
-					<additionalProjectnatures>
-						<!-- maven-eclipse-plugin puts this nature after org.eclipse.jdt.core.javanature 
-							in .project so the project will have a J badge instead of an S in the Package 
-							Explorer -->
-						<projectnature>ch.epfl.lamp.sdt.core.scalanature</projectnature>
-					</additionalProjectnatures>
-					<classpathContainers>
-						<classpathContainer>org.eclipse.jdt.launching.JRE_CONTAINER</classpathContainer>
-						<classpathContainer>ch.epfl.lamp.sdt.launching.SCALA_CONTAINER</classpathContainer>
-					</classpathContainers>
 				</configuration>
 			</plugin>
 
-			<plugin>
-				<groupId>org.codehaus.mojo</groupId>
-				<artifactId>build-helper-maven-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>add-source</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-								<source>src/main/scala</source>
-							</sources>
-						</configuration>
-					</execution>
-					<execution>
-						<id>add-test-source</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>add-test-source</goal>
-						</goals>
-						<configuration>
-							<sources>
-								<source>src/test/scala</source>
-							</sources>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
 
 		</plugins>
 	</build>

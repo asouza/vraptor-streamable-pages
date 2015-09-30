@@ -1,6 +1,7 @@
 package br.com.caelum.vraptor.streamablepages;
 
 import java.util.LinkedList;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -9,8 +10,6 @@ import javax.annotation.PreDestroy;
 import javax.enterprise.inject.Vetoed;
 import javax.inject.Inject;
 
-import br.com.caelum.vraptor.streamablepages.jpromises.JPromise;
-import br.com.caelum.vraptor.Result;
 import br.com.caelum.vraptor.streamablepages.writer.ClientWriter;
 
 import com.ning.http.client.AsyncHttpClient;
@@ -22,7 +21,7 @@ public class PipelineExecutor {
 	//just a guess...
 	private static final ExecutorService WAITING_RESPONSE_POOL = Executors.newFixedThreadPool(5);
 	private AsyncHttpClient client = new AsyncHttpClient();	
-	private LinkedList<JPromise<Integer>> pipeline = new LinkedList<>();
+	private LinkedList<CompletableFuture<Integer>> pipeline = new LinkedList<>();
 	private CountDownLatch requestsCount = new CountDownLatch(0);
 	private PageletRequester pageletRequester;
 	private PageletUrlBuilder pageletUrlBuilder;
@@ -42,12 +41,12 @@ public class PipelineExecutor {
 
 	private class ResponseWriter implements Runnable {
 
-		private JPromise<Integer> waitingRequestPromise;
+		private CompletableFuture<Integer> waitingRequestPromise;
 		private ListenableFuture<String> listener;
-		private JPromise<Integer> externalBlockingPromise;
+		private CompletableFuture<Integer> externalBlockingPromise;
 		private Runnable afterComplete;
 
-		public ResponseWriter(JPromise<Integer> promise, ListenableFuture<String> listener) {
+		public ResponseWriter(CompletableFuture<Integer> promise, ListenableFuture<String> listener) {
 			this(null, promise, listener, new Runnable() {
 				public void run() {
 					requestsCount.countDown();
@@ -55,7 +54,7 @@ public class PipelineExecutor {
 			});
 		}
 
-		public ResponseWriter(JPromise<Integer> externalBlockingPromise, JPromise<Integer> promise,
+		public ResponseWriter(CompletableFuture<Integer> externalBlockingPromise, CompletableFuture<Integer> promise,
 				ListenableFuture<String> executing, Runnable afterComplete) {
 			this.externalBlockingPromise = externalBlockingPromise;
 			this.waitingRequestPromise = promise;
@@ -67,7 +66,7 @@ public class PipelineExecutor {
 		private void completeAndWrite() {
 			try {
 				clientWriter.write(listener.get());
-				waitingRequestPromise.success(1);
+				waitingRequestPromise.complete(1);
 				afterComplete.run();
 			} catch (Exception exception) {
 				throw new RuntimeException(exception);
@@ -82,15 +81,10 @@ public class PipelineExecutor {
 				return;
 			}
 
-			JPromise<Integer> blockingPromise = externalBlockingPromise == null ? pipeline.get(index - 1)
+			CompletableFuture<Integer> blockingPromise = externalBlockingPromise == null ? pipeline.get(index - 1)
 					: externalBlockingPromise;
-
-			// se tem um outra na fila, espera
-			blockingPromise.onSuccess(new Runnable() {
-				@Override
-				public void run() {
-					completeAndWrite();
-				}
+			blockingPromise.thenAccept(result -> {
+				completeAndWrite();
 			});
 		}
 	}
@@ -99,7 +93,7 @@ public class PipelineExecutor {
 		ListenableFuture<String> waitingResponse = pageletRequester.get(pageletUrlBuilder.build(url));
 
 		// podia ser qualquer coisa aqui
-		final JPromise<Integer> myPromise = JPromise.apply();
+		final CompletableFuture<Integer> myPromise = CompletableFuture.completedFuture(1);
 		waitingResponse.addListener(new ResponseWriter(myPromise, waitingResponse), WAITING_RESPONSE_POOL);
 		incRequestsCount();
 		return this;
@@ -111,21 +105,20 @@ public class PipelineExecutor {
 	}
 	
 	public PipelineExecutor unorder(String... urls) {
-		JPromise<Integer> blockingPromise = JPromise.<Integer> apply();
-		if (pipeline.isEmpty()) {
-			blockingPromise.success(1);
-		} else {
+		CompletableFuture<Integer> blockingPromise = CompletableFuture.completedFuture(1);
+		
+		if (!pipeline.isEmpty()) {
 			blockingPromise = pipeline.getLast();
 		}
 
 		final CountDownLatch asyncRequestsBlockCounter = new CountDownLatch(urls.length);
 
-		final JPromise<Integer> asyncRequestsBlocker = JPromise.<Integer> apply();
+		final CompletableFuture<Integer> asyncRequestsBlocker = new CompletableFuture<Integer>();
 
 		for (String url : urls) {	
 			incRequestsCount();
 			ListenableFuture<String> executing = pageletRequester.get(pageletUrlBuilder.build(url));
-			JPromise<Integer> promise = JPromise.<Integer> apply();
+			CompletableFuture<Integer> promise = new CompletableFuture<Integer>();
 			ResponseWriter writer = new ResponseWriter(blockingPromise, promise, executing, new Runnable() {
 
 				@Override
@@ -133,7 +126,7 @@ public class PipelineExecutor {
 					asyncRequestsBlockCounter.countDown();
 					requestsCount.countDown();
 					if (asyncRequestsBlockCounter.getCount() == 0) {
-						asyncRequestsBlocker.success(1);
+						asyncRequestsBlocker.complete(1);
 					}
 				}
 			});
