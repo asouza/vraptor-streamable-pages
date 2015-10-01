@@ -38,6 +38,7 @@ public class PageletRequester {
 
 	@PostConstruct
 	public void postConstruct() {
+		if(request.getCookies() == null) return;
 		for (Cookie cookie : request.getCookies()) {
 			// FIXME I did not find a way to get the expires information from
 			// servlet cookie. Maybe reading request header?
